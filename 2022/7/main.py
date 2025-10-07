@@ -1,41 +1,83 @@
-import re
+import json
 
 
-def parse(data):
-    directory_sizes = {}
-    curr_dir = ""
+def move_up(root, path):
+    end = root["/"]
+    folders = path[1:].split("/")[:-1]
+    if len(folders) <= 1:
+        return end, "/"
+    for folder in folders[:-1]:
+        end = end[folder]
+    new_path = f"/{"/".join(folders[:-1])}/"
+    return end, new_path
+
+
+def create_file_tree(data):
+    root = {}
+    current_dir = root
+    path = ""
     for line in data.split("\n"):
-        if line == "$ cd .." or line.startswith("$ ls") or line.startswith("dir"):
-            print(f"skip: {line}")
+        if line.startswith("$"):
+            if line == "$ cd ..":
+                new_dir, new_path = move_up(root, path)
+                current_dir = new_dir
+                path = new_path
+            elif line.startswith("$ ls"):
+                continue
+            else:
+                _, _, key = line.split(" ")
+                current_dir[key] = {}
+                current_dir = current_dir[key]
+                if key == "/":
+                    path = "/"
+                else:
+                    path = path + key + "/"
+        elif line.startswith("dir"):
             continue
-
-        if line.startswith("$ cd"):
-            curr_dir = line.split(" ")[2]
-            print(f"cd: {line} | curr_dir: {curr_dir}")
-            directory_sizes[curr_dir] = 0
-
-        if re.match(r"[0-9]", line):
+        else:
             size, name = line.split(" ")
-            directory_sizes[curr_dir] += int(size)
+            current_dir[name] = int(size)
 
-    return directory_sizes
+    return root
+
+
+def get_all_totals(node, totals_list):
+    if totals_list is None:
+        totals_list = []
+
+    total = 0
+    for key, value in node.items():
+        if isinstance(value, dict):
+            total += get_all_totals(value, totals_list)
+        else:
+            total += value
+
+    totals_list.append(total)
+
+    return total
 
 
 def main(input):
     with open(f"{input}.txt") as f:
         data = f.read()[:-1]
 
-    directory_sizes = parse(data)
+    root_dir = create_file_tree(data)
 
-    sum = 0
-    for dir, size in directory_sizes.items():
-        print(f"{dir}: {size}")
-        if dir == "/":
-            continue
-        if size <= 100000:
-            sum += size
-    print(sum)
+    totals_list = []
+    get_all_totals(root_dir, totals_list)
+    totals_list.sort()
+
+    root_filesize = max(totals_list)
+    unused = 70000000 - root_filesize
+    min_filesize = 30000000 - unused
+    directories = []
+    for t in totals_list:
+        if t >= min_filesize:
+            directories.append(t)
+
+    print(f"Min filesize: {min_filesize}")
+    print(f"Answer: {min(directories)}")
 
 
 if __name__ == "__main__":
-    main("sample")
+    main("data")
