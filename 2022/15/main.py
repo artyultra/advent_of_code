@@ -2,64 +2,53 @@ import re
 
 
 def parse(raw):
-    lines = raw.split("\n")
     data_points = []
     beacons = set()
-    for line in lines:
-        x_matches = re.findall(r"x=(-?\d+)", line)
-        y_matches = re.findall(r"y=(-?\d+)", line)
-        sensor = (int(x_matches[0]), int(y_matches[0]))
-        beacon = (int(x_matches[1]), int(y_matches[1]))
-        data_points.append([sensor, beacon])
+
+    for line in raw.strip().split("\n"):
+        nums = list(map(int, re.findall(r"-?\d+", line)))
+        sensor = (nums[0], nums[1])
+        beacon = (nums[2], nums[3])
+        data_points.append((sensor, beacon))
         beacons.add(beacon)
+
     return data_points, beacons
 
 
-def find_covered_target_row(data_points, target_row=10):
-    row_coords = set()
-    for sensor, beacon in data_points:
-        distance = abs(sensor[0] - beacon[0]) + abs(sensor[1] - beacon[1])
-        min_max = get_x_range_at_y(sensor, distance, target_row)
-        if min_max is None:
-            continue
-
-        for x in range(min_max[0], min_max[1] + 1):
-            row_coords.add((x, target_row))
-
-    return row_coords
-
-
-def get_x_range_at_y(sensor, distance, target_row):
+def get_x_range_at_y(sensor, distance, target_y):
     sx, sy = sensor
-
-    dy = abs(target_row - sy)
+    dy = abs(target_y - sy)
 
     if dy > distance:
         return None
 
     remaining = distance - dy
-
-    min_x = sx - remaining
-    max_x = sx + remaining
-
-    return (min_x, max_x)
+    return (sx - remaining, sx + remaining)
 
 
-def main(input):
-    with open(f"{input}.txt") as f:
-        raw = f.read().strip()
-    target_row = 10
-    if input == "data":
-        target_row = 2000000
+def count_covered_positions(data_points, beacons, target_y):
+    covered = set()
+
+    for sensor, beacon in data_points:
+        distance = abs(sensor[0] - beacon[0]) + abs(sensor[1] - beacon[1])
+        x_range = get_x_range_at_y(sensor, distance, target_y)
+        if x_range:
+            for x in range(x_range[0], x_range[1] + 1):
+                covered.add(x)
+
+    beacons_xs_at_y = {bx for bx, by in beacons if by == target_y}
+    return len(covered - beacons_xs_at_y)
+
+
+def main(input_file):
+    with open(f"{input_file}.txt") as f:
+        raw = f.read()
+
+    target_row = 2000000 if input_file == "data" else 10
     data_points, beacons = parse(raw)
-    row_coords = find_covered_target_row(data_points, target_row)
-    count = 0
-    for coord in row_coords:
-        if coord in beacons:
-            continue
-        count += 1
-    print(count)
+    result = count_covered_positions(data_points, beacons, target_row)
+    print(f"Result: {result}")
 
 
 if __name__ == "__main__":
-    main("data")
+    main("sample")
