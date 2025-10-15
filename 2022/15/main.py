@@ -15,40 +15,49 @@ def parse(raw):
     return data_points, beacons
 
 
-def get_x_range_at_y(sensor, distance, target_y):
-    sx, sy = sensor
-    dy = abs(target_y - sy)
+def find_uncovered_point(data_points, max_coords=20, min_coords=0):
+    sensors_with_ranges = [
+        (sensor, abs(sensor[0] - beacon[0]) + abs(sensor[1] - beacon[1]))
+        for sensor, beacon in data_points
+    ]
 
-    if dy > distance:
-        return None
+    for sensor, distance in sensors_with_ranges:
+        sx, sy = sensor
+        check_distance = distance + 1
 
-    remaining = distance - dy
-    return (sx - remaining, sx + remaining)
+        for dx in range(check_distance + 1):
+            dy = check_distance - dx
+            candidates = [
+                (sx + dx, sy + dy),
+                (sx - dx, sy + dy),
+                (sx + dx, sy - dy),
+                (sx - dx, sy - dy),
+            ]
 
+            for point in candidates:
+                px, py = point
 
-def count_covered_positions(data_points, beacons, target_y):
-    covered = set()
+                if not (
+                    min_coords <= px <= max_coords and min_coords <= py <= max_coords
+                ):
+                    continue
 
-    for sensor, beacon in data_points:
-        distance = abs(sensor[0] - beacon[0]) + abs(sensor[1] - beacon[1])
-        x_range = get_x_range_at_y(sensor, distance, target_y)
-        if x_range:
-            for x in range(x_range[0], x_range[1] + 1):
-                covered.add(x)
-
-    beacons_xs_at_y = {bx for bx, by in beacons if by == target_y}
-    return len(covered - beacons_xs_at_y)
+                if all(
+                    abs(px - s[0]) + abs(py - s[1]) > d for s, d in sensors_with_ranges
+                ):
+                    return point
+    return None
 
 
 def main(input_file):
     with open(f"{input_file}.txt") as f:
         raw = f.read()
 
-    target_row = 2000000 if input_file == "data" else 10
-    data_points, beacons = parse(raw)
-    result = count_covered_positions(data_points, beacons, target_row)
-    print(f"Result: {result}")
+    max_y = 4000000 if input_file == "data" else 20
+    data_points, _ = parse(raw)
+    result = find_uncovered_point(data_points, max_y)
+    print(f"Result: {(4000000 * result[0]) + result[1]}")
 
 
 if __name__ == "__main__":
-    main("sample")
+    main("data")
