@@ -101,7 +101,6 @@ def main(input):
 
                         if state in seen_states:
                             # Found a cycle! Skip ahead
-                            print("Skipping ahead")
                             skipped = True
                             prev_rock_count, prev_height = seen_states[state]
 
@@ -113,7 +112,6 @@ def main(input):
                             ) // cycle_length
                             rock_count += cycle_length * num_cycles_to_skip
                             rocks_added_from_skip = num_cycles_to_skip * cycle_height
-                            print(f"Skipped {rocks_added_from_skip} rocks")
 
                         seen_states[state] = (rock_count, max_height)
 
@@ -134,4 +132,4 @@ def main(input):
 
 
 if __name__ == "__main__":
-    main("sample")
+    main("data")
